@@ -1,0 +1,77 @@
+- name: Install Docker
+  hosts: all
+  vars:
+    client_image: kndungi/yolo-client:1.0.0
+    backend_image: kndungi/yolo-backend:1.0.0
+    app_folder: /opt/yolo
+  tasks:
+    - name: Update the cache
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Install packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+          - python3-pip
+          - virtualenv
+          - python3-setuptools
+        update_cache: yes
+
+    - name: Add Docker official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/debian/gpg
+        state: present
+
+    - name: Add docker repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/debian bullseye stable
+        state: present
+
+    - name: Update the cache
+      apt:
+        update_cache: yes
+
+    - name: Install packages
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+          - docker-compose
+        update_cache: yes
+
+    - name: Install the Docker module for Python, required by ansible
+      pip:
+        name: docker
+
+    - name: Pull the client image
+      community.docker.docker_image:
+        name: "{{ client_image }}"
+        source: pull
+
+    - name: Pull the backend image
+      community.docker.docker_image:
+        name: "{{ backend_image }}"
+        source: pull
+
+    - name: Create app folder
+      file:
+        path: "{{ app_folder }}"
+        state: directory
+
+    - name: Copy docker-compose file
+      template:
+        src: ./../docker-compose.yaml
+        dest: "{{ app_folder }}/docker-compose.yaml"
+
+    - name: Start containers
+      shell: docker-compose up -d
+      args:
+        chdir: "{{ app_folder }}"
